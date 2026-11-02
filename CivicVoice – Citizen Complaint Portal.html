@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CivicVoice – Citizen Complaint Portal</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--tx:#16202e;--mu:#5b6778;--ac:#1f5fbf;--bd:#dbe1ea;--ok:#1b8a4b;--bad:#c0392b;--wr:#b7791f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10151d;--card:#1a212c;--tx:#e8edf5;--mu:#97a3b5;--ac:#6ea8ff;--bd:#2d3748;--ok:#4cc58a;--bad:#ff7b6b;--wr:#e5b457}}
+:root[data-theme="dark"]{--bg:#10151d;--card:#1a212c;--tx:#e8edf5;--mu:#97a3b5;--ac:#6ea8ff;--bd:#2d3748;--ok:#4cc58a;--bad:#ff7b6b;--wr:#e5b457}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--ac);color:#fff;padding:12px 16px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+header b{font-size:18px}header small{opacity:.85;display:block}
+nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:4}
+nav a{white-space:nowrap;padding:6px 11px;border-radius:16px;color:var(--tx);text-decoration:none;border:1px solid var(--bd);font-size:13px}
+nav a.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+main{max-width:1000px;margin:0 auto;padding:16px}
+h2{margin:0 0 4px}p.sub{color:var(--mu);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+a.mod{display:block;text-decoration:none;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
+a.mod:hover{border-color:var(--ac)}a.mod b{color:var(--ac);display:block}a.mod span{color:var(--mu);font-size:13px}
+.stat{font-size:26px;font-weight:700;color:var(--ac)}.stat small{display:block;font-size:12px;color:var(--mu);font-weight:400}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+label{font-size:12px;color:var(--mu);display:block}
+input,select,textarea{padding:7px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font:inherit;max-width:100%}
+button{padding:7px 12px;border:0;border-radius:6px;background:var(--ac);color:#fff;font:inherit;cursor:pointer}
+button.s{background:transparent;color:var(--ac);border:1px solid var(--ac);padding:3px 8px;font-size:12px}
+button.d{background:var(--bad)}button.g{background:var(--ok)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd);vertical-align:top}th{color:var(--mu);font-weight:600}
+.tag{padding:2px 8px;border-radius:10px;font-size:12px;background:var(--bg);border:1px solid var(--bd)}
+.note{padding:9px 12px;border-radius:8px;margin-bottom:12px}.note.ok{background:rgba(27,138,75,.15);color:var(--ok)}.note.er{background:rgba(192,57,43,.15);color:var(--bad)}
+.bar{height:14px;background:var(--ac);border-radius:4px;min-width:3px}
+.lnk{color:var(--ac)}
+</style></head><body>
+<header><b>CivicVoice</b><small>Citizen Complaint Portal</small></header>
+<nav id="nav"></nav>
+<main><div id="note"></div><div id="main"></div></main>
+<script>
+var CATS=['Road Damage','Streetlight','Sanitation','Drainage','Water Supply','Electricity'];
+var ST=['Submitted','Assigned','In Progress','Resolved','Closed'];
+var MODS=[['dashboard','Home (Main)','Menu connecting every module'],['citizens','Citizen','Register, update, history, deactivate'],['complaints','Complaint','Register, update, change status, close'],['departments','Department','Add, assign complaints, view workload'],['resolution','Resolution','Officer, progress, resolve or reopen'],['feedback','Feedback','Rate 1–5 and see the average'],['validate','ValidateService','Check IDs, mobile, email'],['search','SearchService','Find by ID, name, category, status'],['reports','ReportGenerationService','Complaint, department, resolution, feedback reports'],['analysis','AnalysisService','Statistics and overall summary']];
+var db,ed={},filt={},sel={};
+function seed(){return{citizens:[{id:'C101',name:'Asha Verma',mobile:'9876543210',email:'asha@mail.com',active:true},{id:'C102',name:'Ravi Kumar',mobile:'9123456780',email:'ravi@mail.com',active:true}],
+depts:[['Roads','Road Damage'],['Street Lighting','Streetlight'],['Sanitation','Sanitation'],['Drainage','Drainage'],['Water Board','Water Supply'],['Electricity','Electricity']].map(function(d,i){return{id:'D0'+(i+1),name:d[0],cat:d[1]}}),
+complaints:[{id:'CMP1001',cid:'C101',cat:'Road Damage',desc:'Large pothole near market',status:'In Progress',did:'D01'},{id:'CMP1002',cid:'C102',cat:'Streetlight',desc:'Light off on 5th Cross',status:'Resolved',did:'D02'},{id:'CMP1003',cid:'C101',cat:'Sanitation',desc:'Garbage not collected',status:'Submitted',did:''}],
+res:[{cid:'CMP1001',officer:'S. Nair',progress:50},{cid:'CMP1002',officer:'M. Iqbal',progress:100}],fb:[]}}
+function load(){try{var s=localStorage.getItem('civicvoice');db=s?JSON.parse(s):seed()}catch(e){db=seed()}}
+function save(){try{localStorage.setItem('civicvoice',JSON.stringify(db));return true}catch(e){return false}}
+function commit(m,ok){save();flash(m,ok)}
+function flash(m,ok){document.getElementById('note').innerHTML=m?'<div class="note '+(ok===false?'er':'ok')+'">'+esc(m)+'</div>':'';render()}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function $v(id){var e=document.getElementById(id);return e?e.value.trim():''}
+function nid(p,l,s){return p+(s+l.length)}
+var V={mobile:function(m){return /^\d{10}$/.test(m)},email:function(e){return /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(e)},
+exists:function(l,id){return l.some(function(x){return x.id===id})}};
+function cName(id){var c=db.citizens.filter(function(x){return x.id===id})[0];return c?c.name:id}
+function dName(id){var d=db.depts.filter(function(x){return x.id===id})[0];return d?d.name:'—'}
+function tbl(h,rows){return '<div class="tw"><table><tr>'+h.map(function(x){return'<th>'+x+'</th>'}).join('')+'</tr>'+(rows.length?rows.map(function(r){return'<tr>'+r.map(function(c){return'<td>'+c+'</td>'}).join('')+'</tr>'}).join(''):'<tr><td colspan="'+h.length+'">No records.</td></tr>')+'</table></div>'}
+function opts(arr,cur){return arr.map(function(a){var v=Array.isArray(a)?a[0]:a,t=Array.isArray(a)?a[1]:a;return'<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(t)+'</option>'}).join('')}
+function head(t,s){return'<h2>'+t+'</h2><p class="sub">'+s+'</p>'}
+function res(cid){return db.res.filter(function(r){return r.cid===cid})[0]}
+function setStatus(id,st){var c=db.complaints.filter(function(x){return x.id===id})[0];c.status=st;commit(id+' is now '+st)}
+
+/* Citizen */
+function saveCit(){var n=$v('cn'),m=$v('cm'),e=$v('ce');
+ if(!n)return flash('Name is required.',false);if(!V.mobile(m))return flash('Mobile must be exactly 10 digits.',false);if(!V.email(e))return flash('Email format is invalid.',false);
+ if(ed.cit){var c=db.citizens.filter(function(x){return x.id===ed.cit})[0];c.name=n;c.mobile=m;c.email=e;ed.cit=null;commit('Citizen updated.')}
+ else{var id=nid('C',db.citizens,101);db.citizens.push({id:id,name:n,mobile:m,email:e,active:true});commit('Citizen registered as '+id+'.')}}
+function toggleCit(id){var c=db.citizens.filter(function(x){return x.id===id})[0];c.active=!c.active;commit(c.name+(c.active?' reactivated.':' deactivated.'))}
+function editCit(id){ed.cit=id;render()}
+/* Complaint */
+function saveCmp(){var cid=$v('cc'),cat=$v('ct'),d=$v('cd');
+ if(!d)return flash('Description is required.',false);
+ if(ed.cmp){var c=db.complaints.filter(function(x){return x.id===ed.cmp})[0];c.cat=cat;c.desc=d;ed.cmp=null;return commit('Complaint updated.')}
+ if(!V.exists(db.citizens,cid))return flash('Citizen ID does not exist.',false);
+ var dep=db.depts.filter(function(x){return x.cat===cat})[0],id=nid('CMP',db.complaints,1001);
+ db.complaints.push({id:id,cid:cid,cat:cat,desc:d,status:dep?'Assigned':'Submitted',did:dep?dep.id:''});
+ commit('Complaint '+id+' registered'+(dep?' and routed to '+dep.name+'.':'.'))}
+/* Department */
+function addDept(){var n=$v('dn'),c=$v('dc');if(!n)return flash('Department name required.',false);db.depts.push({id:nid('D0',db.depts,1),name:n,cat:c});commit('Department added.')}
+function assignDept(){var c=$v('ac'),d=$v('ad'),x=db.complaints.filter(function(k){return k.id===c})[0];if(!x||!d)return flash('Pick a complaint and a department.',false);x.did=d;if(x.status==='Submitted')x.status='Assigned';commit(c+' assigned to '+dName(d)+'.')}
+/* Resolution */
+function saveRes(cid){var o=$v('o'+cid),p=+$v('p'+cid),r=res(cid);if(!o)return flash('Enter a field officer name.',false);
+ if(!r){r={cid:cid,officer:o,progress:p};db.res.push(r)}r.officer=o;r.progress=p;
+ var c=db.complaints.filter(function(x){return x.id===cid})[0];if(c.status==='Assigned'||c.status==='Submitted')c.status='In Progress';commit('Progress saved for '+cid+'.')}
+function resolve(cid){var r=res(cid);if(!r)return flash('Assign an officer first.',false);r.progress=100;setStatus(cid,'Resolved')}
+function reopen(cid){var r=res(cid);if(r)r.progress=50;setStatus(cid,'In Progress')}
+/* Feedback */
+function addFb(){var c=$v('fc'),r=+$v('fr'),t=$v('ft');if(!c)return flash('Choose a resolved complaint.',false);if(r<1||r>5)return flash('Rating must be 1 to 5.',false);
+ db.fb.push({id:nid('F',db.fb,1),cid:c,rating:r,comment:t});commit('Thank you! Feedback saved.')}
+function avg(){return db.fb.length?(db.fb.reduce(function(a,f){return a+f.rating},0)/db.fb.length):0}
+
+var P={};
+P.dashboard=function(){var n=db.complaints.length,r=db.complaints.filter(function(c){return c.status==='Resolved'||c.status==='Closed'}).length;
+ return head('Welcome to CivicVoice','Choose a module below. Every card is a hyperlink to that module.')+
+ '<div class="grid" style="margin-bottom:14px">'+[[db.citizens.length,'Citizens'],[n,'Complaints'],[r,'Resolved / Closed'],[avg().toFixed(1),'Average rating']].map(function(s){return'<div class="card" style="margin:0"><div class="stat">'+s[0]+'<small>'+s[1]+'</small></div></div>'}).join('')+'</div>'+
+ '<div class="grid">'+MODS.slice(1).map(function(m){return'<a class="mod" href="#'+m[0]+'"><b>'+m[1]+' Module</b><span>'+m[2]+'</span></a>'}).join('')+'</div>'+
+ '<div class="card" style="margin-top:14px"><b>Data persistence</b><p class="sub">Records are saved in this browser, like the file handling in the Java version.</p><button onclick="commit(save()?\'Data saved.\':\'Could not save in this browser.\',save())">Save data</button> <button class="d" onclick="db=seed();commit(\'Sample data restored.\')">Reset sample data</button></div>'};
+P.citizens=function(){var e=ed.cit?db.citizens.filter(function(x){return x.id===ed.cit})[0]:{name:'',mobile:'',email:''};
+ return head('Citizen Module','Register, update, display, view complaint history and deactivate accounts.')+
+ '<div class="card"><div class="row"><div><label>Name</label><input id="cn" value="'+esc(e.name)+'"></div><div><label>Mobile (10 digits)</label><input id="cm" value="'+esc(e.mobile)+'" inputmode="numeric"></div><div><label>Email</label><input id="ce" value="'+esc(e.email)+'"></div><button onclick="saveCit()">'+(ed.cit?'Update':'Register')+' citizen</button></div>'+
+ '<p class="sub" style="margin:8px 0 0">Checked by <a class="lnk" href="#validate">ValidateService</a> rules.</p></div>'+
+ tbl(['ID','Name','Mobile','Email','Status','Actions'],db.citizens.map(function(c){return[c.id,esc(c.name),c.mobile,esc(c.email),'<span class="tag">'+(c.active?'Active':'Deactivated')+'</span>','<button class="s" onclick="editCit(\''+c.id+'\')">Edit</button> <a class="lnk" href="#complaints" onclick="filt.cit=\''+c.id+'\'">History</a> <button class="s" onclick="toggleCit(\''+c.id+'\')">'+(c.active?'Deactivate':'Activate')+'</button>']}))};
+P.complaints=function(){var e=ed.cmp?db.complaints.filter(function(x){return x.id===ed.cmp})[0]:{desc:'',cat:CATS[0]};
+ var list=db.complaints.filter(function(c){return!filt.cit||c.cid===filt.cit});
+ return head('Complaint Module','Register a complaint, update it, change its status and close it.')+
+ '<div class="card"><div class="row">'+(ed.cmp?'':'<div><label>Citizen</label><select id="cc">'+opts(db.citizens.filter(function(c){return c.active}).map(function(c){return[c.id,c.id+' – '+c.name]}))+'</select></div>')+
+ '<div><label>Category</label><select id="ct">'+opts(CATS,e.cat)+'</select></div><div style="flex:1;min-width:200px"><label>Description</label><input id="cd" style="width:100%" value="'+esc(e.desc)+'"></div><button onclick="saveCmp()">'+(ed.cmp?'Update':'Register')+' complaint</button></div></div>'+
+ (filt.cit?'<div class="note ok">Showing history of '+esc(cName(filt.cit))+'. <a class="lnk" href="#complaints" onclick="filt.cit=null">Show all</a></div>':'')+
+ tbl(['ID','Citizen','Category','Description','Dept','Status','Actions'],list.map(function(c){return[c.id,esc(cName(c.cid)),c.cat,esc(c.desc),'<a class="lnk" href="#departments">'+esc(dName(c.did))+'</a>','<select onchange="setStatus(\''+c.id+'\',this.value)">'+opts(ST,c.status)+'</select>','<button class="s" onclick="ed.cmp=\''+c.id+'\';render()">Edit</button> <button class="s" onclick="setStatus(\''+c.id+'\',\'Closed\')">Close</button> <a class="lnk" href="#resolution">Resolve</a>']}))};
+P.departments=function(){var v=sel.dept,vl=db.complaints.filter(function(c){return c.did===v});
+ return head('Department Module','Add departments, assign complaints and view each department\u2019s complaints.')+
+ '<div class="card"><div class="row"><div><label>Department name</label><input id="dn"></div><div><label>Handles category</label><select id="dc">'+opts(CATS)+'</select></div><button onclick="addDept()">Add department</button></div></div>'+
+ '<div class="card"><div class="row"><div><label>Complaint</label><select id="ac">'+opts(db.complaints.map(function(c){return[c.id,c.id+' – '+c.cat]}))+'</select></div><div><label>Department</label><select id="ad">'+opts(db.depts.map(function(d){return[d.id,d.name]}))+'</select></div><button onclick="assignDept()">Assign complaint</button></div></div>'+
+ tbl(['ID','Department','Category','Complaints','View'],db.depts.map(function(d){return[d.id,esc(d.name),d.cat,db.complaints.filter(function(c){return c.did===d.id}).length,'<button class="s" onclick="sel.dept=\''+d.id+'\';render()">View</button>']}))+
+ (v?'<div class="card" style="margin-top:14px"><b>Complaints of '+esc(dName(v))+'</b>'+tbl(['ID','Category','Status'],vl.map(function(c){return[c.id,c.cat,c.status]}))+'</div>':'')};
+P.resolution=function(){var l=db.complaints.filter(function(c){return c.status!=='Submitted'});
+ return head('Complaint Resolution Module','Assign a field officer, update progress, mark resolved or reopen.')+
+ tbl(['Complaint','Status','Officer','Progress','Actions'],l.map(function(c){var r=res(c.id)||{officer:'',progress:0};
+ return[c.id+'<br><small>'+c.cat+'</small>','<span class="tag">'+c.status+'</span>','<input id="o'+c.id+'" value="'+esc(r.officer)+'" size="10">','<select id="p'+c.id+'">'+opts(['0','25','50','75','100'],String(r.progress))+'</select>%','<button class="s" onclick="saveRes(\''+c.id+'\')">Save</button> <button class="s" onclick="resolve(\''+c.id+'\')">Resolve</button> <button class="s" onclick="reopen(\''+c.id+'\')">Reopen</button>'+(c.status==='Resolved'?' <a class="lnk" href="#feedback">Feedback</a>':'')]}))};
+P.feedback=function(){var el=db.complaints.filter(function(c){return(c.status==='Resolved'||c.status==='Closed')&&!db.fb.some(function(f){return f.cid===c.id})});
+ return head('Feedback Module','Rate a solved complaint from 1 to 5 and leave a comment.')+
+ '<div class="card"><div class="row"><div><label>Solved complaint</label><select id="fc">'+(el.length?opts(el.map(function(c){return[c.id,c.id+' – '+c.cat]})):'<option value="">None available</option>')+'</select></div><div><label>Rating</label><select id="fr">'+opts(['5','4','3','2','1'])+'</select></div><div style="flex:1;min-width:180px"><label>Comment</label><input id="ft" style="width:100%"></div><button onclick="addFb()">Submit</button></div></div>'+
+ '<div class="card"><span class="stat">'+avg().toFixed(2)+'<small>Average rating ('+db.fb.length+' reviews)</small></span></div>'+
+ tbl(['ID','Complaint','Rating','Comment'],db.fb.map(function(f){return[f.id,f.cid,'★'.repeat(f.rating),esc(f.comment)]}))};
+P.validate=function(){return head('ValidateService Module','These checks run before any record is saved.')+
+ '<div class="card"><div class="row"><div><label>Mobile</label><input id="vm" oninput="vchk()"></div><div><label>Email</label><input id="ve" oninput="vchk()"></div><div><label>Citizen ID</label><input id="vi" oninput="vchk()"></div><div><label>Complaint ID</label><input id="vc" oninput="vchk()"></div></div><p id="vr" class="sub" style="margin:10px 0 0">Type to test…</p></div>'+
+ '<p class="sub">Used by <a class="lnk" href="#citizens">Citizen</a> and <a class="lnk" href="#complaints">Complaint</a> modules.</p>'};
+function vchk(){var m=$v('vm'),e=$v('ve'),i=$v('vi'),c=$v('vc'),o=[];
+ if(m)o.push('Mobile: '+(V.mobile(m)?'✔ valid':'✘ needs 10 digits'));if(e)o.push('Email: '+(V.email(e)?'✔ valid':'✘ invalid format'));
+ if(i)o.push('Citizen ID: '+(V.exists(db.citizens,i)?'✔ exists':'✘ not found'));if(c)o.push('Complaint ID: '+(V.exists(db.complaints,c)?'✔ exists':'✘ not found'));
+ document.getElementById('vr').innerHTML=o.join('<br>')||'Type to test…'}
+P.search=function(){var k=sel.sk||'citizens',q=(sel.sq||'').toLowerCase(),out=[];
+ if(q){if(k==='citizens')out=db.citizens.filter(function(c){return(c.id+c.name).toLowerCase().indexOf(q)>-1}).map(function(c){return[c.id,esc(c.name),c.mobile]});
+ if(k==='complaints')out=db.complaints.filter(function(c){return(c.id+c.cat+c.status).toLowerCase().indexOf(q)>-1}).map(function(c){return[c.id,c.cat,c.status]});
+ if(k==='departments')out=db.depts.filter(function(d){return(d.id+d.name+d.cat).toLowerCase().indexOf(q)>-1}).map(function(d){return[d.id,esc(d.name),d.cat]});
+ if(k==='feedback')out=db.fb.filter(function(f){return(f.id+f.cid+f.comment+f.rating).toLowerCase().indexOf(q)>-1}).map(function(f){return[f.id,f.cid,f.rating+'★ '+esc(f.comment)]})}
+ return head('SearchService Module','Search by ID, name, category or status.')+
+ '<div class="card"><div class="row"><div><label>Search in</label><select id="sk">'+opts(['citizens','complaints','departments','feedback'],k)+'</select></div><div><label>Keyword</label><input id="sq" value="'+esc(sel.sq||'')+'"></div><button onclick="sel.sk=$v(\'sk\');sel.sq=$v(\'sq\');render()">Search</button></div></div>'+
+ (q?tbl(['Field 1','Field 2','Field 3'],out):'<p class="sub">Enter a keyword to see results.</p>')};
+P.reports=function(){return head('ReportGenerationService Module','Printable reports.')+'<button onclick="window.print()">Print</button>'+
+ '<h3>Complaint report</h3>'+tbl(['ID','Citizen','Category','Status'],db.complaints.map(function(c){return[c.id,esc(cName(c.cid)),c.cat,c.status]}))+
+ '<h3>Department report</h3>'+tbl(['Department','Total','Resolved'],db.depts.map(function(d){var l=db.complaints.filter(function(c){return c.did===d.id});return[esc(d.name),l.length,l.filter(function(c){return c.status==='Resolved'||c.status==='Closed'}).length]}))+
+ '<h3>Resolution report</h3>'+tbl(['Complaint','Officer','Progress'],db.res.map(function(r){return[r.cid,esc(r.officer),r.progress+'%']}))+
+ '<h3>Feedback report</h3>'+tbl(['Complaint','Rating','Comment'],db.fb.map(function(f){return[f.cid,f.rating,esc(f.comment)]}))};
+P.analysis=function(){var n=db.complaints.length,cnt={};db.complaints.forEach(function(c){cnt[c.cat]=(cnt[c.cat]||0)+1});
+ var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]})[0],done=db.complaints.filter(function(c){return c.status==='Resolved'||c.status==='Closed'}).length,mx=Math.max.apply(null,Object.keys(cnt).map(function(k){return cnt[k]}).concat([1]));
+ return head('AnalysisService Module','Statistics from the complaint data.')+
+ '<div class="grid"><div class="card"><div class="stat">'+(top||'—')+'<small>Most common complaint type</small></div></div><div class="card"><div class="stat">'+(n?Math.round(done*100/n):0)+'%<small>Complaints resolved</small></div></div><div class="card"><div class="stat">'+avg().toFixed(1)+'<small>Average rating</small></div></div></div>'+
+ '<div class="card"><b>Complaints by category</b>'+Object.keys(cnt).map(function(k){return'<div style="margin-top:8px">'+k+' ('+cnt[k]+')<div class="bar" style="width:'+(cnt[k]*100/mx)+'%"></div></div>'}).join('')+'</div>'+
+ '<b>Department performance</b>'+tbl(['Department','Total','Resolved','Rate'],db.depts.map(function(d){var l=db.complaints.filter(function(c){return c.did===d.id}),r=l.filter(function(c){return c.status==='Resolved'||c.status==='Closed'}).length;return[esc(d.name),l.length,r,l.length?Math.round(r*100/l.length)+'%':'—']}))+
+ '<div class="card" style="margin-top:14px"><b>Overall summary:</b> '+db.citizens.length+' citizens, '+n+' complaints, '+done+' resolved, '+db.fb.length+' feedback entries. See <a class="lnk" href="#reports">reports</a>.</div>'};
+
+function render(){var r=location.hash.slice(1)||'dashboard';if(!P[r])r='dashboard';
+ document.getElementById('nav').innerHTML=MODS.map(function(m){return'<a href="#'+m[0]+'"'+(m[0]===r?' class="on"':'')+'>'+m[1]+'</a>'}).join('');
+ document.getElementById('main').innerHTML=P[r]()}
+window.addEventListener('hashchange',function(){document.getElementById('note').innerHTML='';ed={};render();window.scrollTo(0,0)});
+load();render();
+</script></body></html>
