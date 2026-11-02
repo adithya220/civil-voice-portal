@@ -39,12 +39,12 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd);vertical
 <script>
 var CATS=['Road Damage','Streetlight','Sanitation','Drainage','Water Supply','Electricity'];
 var ST=['Submitted','Assigned','In Progress','Resolved','Closed'];
-var MODS=[['dashboard','Home (Main)','Menu connecting every module'],['citizens','Citizen','Register, update, history, deactivate'],['complaints','Complaint','Register, update, change status, close'],['departments','Department','Add, assign complaints, view workload'],['resolution','Resolution','Officer, progress, resolve or reopen'],['feedback','Feedback','Rate 1–5 and see the average'],['validate','ValidateService','Check IDs, mobile, email'],['search','SearchService','Find by ID, name, category, status'],['reports','ReportGenerationService','Complaint, department, resolution, feedback reports'],['analysis','AnalysisService','Statistics and overall summary']];
+var MODS=[['dashboard','Home','Menu connecting every module'],['citizens','Citizen','Register, update, history, deactivate'],['complaints','Complaint','Register, update, change status, close'],['departments','Department','Add, assign complaints, view workload'],['resolution','Resolution','Officer, progress, resolve or reopen'],['feedback','Feedback','Rate 1–5 and see the average'],['validate','ValidateService','Check IDs, mobile, email'],['search','SearchService','Find by ID, name, category, status'],['reports','ReportGenerationService','Complaint, department, resolution, feedback reports'],['analysis','AnalysisService','Statistics and overall summary']];
 var db,ed={},filt={},sel={};
-function seed(){return{citizens:[{id:'C101',name:'Asha Verma',mobile:'9876543210',email:'asha@mail.com',active:true},{id:'C102',name:'Ravi Kumar',mobile:'9123456780',email:'ravi@mail.com',active:true}],
+function seed(){return{citizens:[{id:'C1',name:'Asha Verma',mobile:'9876543210',email:'asha@mail.com',active:true},{id:'C2',name:'Ravi Kumar',mobile:'9123456780',email:'ravi@mail.com',active:true}],
 depts:[['Roads','Road Damage'],['Street Lighting','Streetlight'],['Sanitation','Sanitation'],['Drainage','Drainage'],['Water Board','Water Supply'],['Electricity','Electricity']].map(function(d,i){return{id:'D0'+(i+1),name:d[0],cat:d[1]}}),
-complaints:[{id:'CMP1001',cid:'C101',cat:'Road Damage',desc:'Large pothole near market',status:'In Progress',did:'D01'},{id:'CMP1002',cid:'C102',cat:'Streetlight',desc:'Light off on 5th Cross',status:'Resolved',did:'D02'},{id:'CMP1003',cid:'C101',cat:'Sanitation',desc:'Garbage not collected',status:'Submitted',did:''}],
-res:[{cid:'CMP1001',officer:'S. Nair',progress:50},{cid:'CMP1002',officer:'M. Iqbal',progress:100}],fb:[]}}
+complaints:[{id:'CMP1001',cid:'C1',cat:'Road Damage',desc:'Large pothole near market',status:'In Progress',did:'D01'},{id:'CMP1002',cid:'C2',cat:'Streetlight',desc:'Light off on 5th Cross',status:'Resolved',did:'D02'},{id:'CMP1003',cid:'C1',cat:'Sanitation',desc:'Garbage not collected',status:'Submitted',did:''}],
+res:[{cid:'CMP1001',officer:'S. Nair',progress:50},{cid:'CMP1002',officer:'M. Iqbal',progress:100}],fb:[],citizenSeq:2}}
 function load(){try{var s=localStorage.getItem('civicvoice');db=s?JSON.parse(s):seed()}catch(e){db=seed()}}
 function save(){try{localStorage.setItem('civicvoice',JSON.stringify(db));return true}catch(e){return false}}
 function commit(m,ok){save();flash(m,ok)}
@@ -66,7 +66,7 @@ function setStatus(id,st){var c=db.complaints.filter(function(x){return x.id===i
 function saveCit(){var n=$v('cn'),m=$v('cm'),e=$v('ce');
  if(!n)return flash('Name is required.',false);if(!V.mobile(m))return flash('Mobile must be exactly 10 digits.',false);if(!V.email(e))return flash('Email format is invalid.',false);
  if(ed.cit){var c=db.citizens.filter(function(x){return x.id===ed.cit})[0];c.name=n;c.mobile=m;c.email=e;ed.cit=null;commit('Citizen updated.')}
- else{var id=nid('C',db.citizens,101);db.citizens.push({id:id,name:n,mobile:m,email:e,active:true});commit('Citizen registered as '+id+'.')}}
+ else{db.citizenSeq=(db.citizenSeq||db.citizens.length)+1;var idNum=((db.citizenSeq-1)%1000)+1;var id='C'+idNum;db.citizens.push({id:id,name:n,mobile:m,email:e,active:true});commit('Citizen registered as '+id+' (Auto-renewal ID).')}}
 function toggleCit(id){var c=db.citizens.filter(function(x){return x.id===id})[0];c.active=!c.active;commit(c.name+(c.active?' reactivated.':' deactivated.'))}
 function editCit(id){ed.cit=id;render()}
 /* Complaint */
@@ -98,8 +98,10 @@ P.dashboard=function(){var n=db.complaints.length,r=db.complaints.filter(functio
  '<div class="grid">'+MODS.slice(1).map(function(m){return'<a class="mod" href="#'+m[0]+'"><b>'+m[1]+' Module</b><span>'+m[2]+'</span></a>'}).join('')+'</div>'+
  '<div class="card" style="margin-top:14px"><b>Data persistence</b><p class="sub">Records are saved in this browser, like the file handling in the Java version.</p><button onclick="commit(save()?\'Data saved.\':\'Could not save in this browser.\',save())">Save data</button> <button class="d" onclick="db=seed();commit(\'Sample data restored.\')">Reset sample data</button></div>'};
 P.citizens=function(){var e=ed.cit?db.citizens.filter(function(x){return x.id===ed.cit})[0]:{name:'',mobile:'',email:''};
+ var currentSeq = ((db.citizenSeq || db.citizens.length) - 1) % 1000 + 1;
  return head('Citizen Module','Register, update, display, view complaint history and deactivate accounts.')+
  '<div class="card"><div class="row"><div><label>Name</label><input id="cn" value="'+esc(e.name)+'"></div><div><label>Mobile (10 digits)</label><input id="cm" value="'+esc(e.mobile)+'" inputmode="numeric"></div><div><label>Email</label><input id="ce" value="'+esc(e.email)+'"></div><button onclick="saveCit()">'+(ed.cit?'Update':'Register')+' citizen</button></div>'+
+ '<div style="margin-top:10px; font-size:13px; color:var(--mu);"><b>Auto-Renewal Limit Status:</b> Current ID Counter is <b>C'+currentSeq+'</b> (Max Limit: 1000, rolls over to C1 after 1000).</div>'+
  '<p class="sub" style="margin:8px 0 0">Checked by <a class="lnk" href="#validate">ValidateService</a> rules.</p></div>'+
  tbl(['ID','Name','Mobile','Email','Status','Actions'],db.citizens.map(function(c){return[c.id,esc(c.name),c.mobile,esc(c.email),'<span class="tag">'+(c.active?'Active':'Deactivated')+'</span>','<button class="s" onclick="editCit(\''+c.id+'\')">Edit</button> <a class="lnk" href="#complaints" onclick="filt.cit=\''+c.id+'\'">History</a> <button class="s" onclick="toggleCit(\''+c.id+'\')">'+(c.active?'Deactivate':'Activate')+'</button>']}))};
 P.complaints=function(){var e=ed.cmp?db.complaints.filter(function(x){return x.id===ed.cmp})[0]:{desc:'',cat:CATS[0]};
